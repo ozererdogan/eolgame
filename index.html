@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electrical Safety Inspector Game</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const ElectricalPuzzleGame = () => {
+            const [config, setConfig] = useState(null);
+            const [gameState, setGameState] = useState('loading');
+            const [selectedEquipment, setSelectedEquipment] = useState(null);
+            const [testedEquipment, setTestedEquipment] = useState({});
+            const [testResults, setTestResults] = useState({});
+            const [score, setScore] = useState(0);
+            const [showElectricStrike, setShowElectricStrike] = useState(false);
+            const [fireActive, setFireActive] = useState(false);
+
+            useEffect(() => {
+                fetch('config.json')
+                    .then(res => res.json())
+                    .then(data => {
+                        setConfig(data);
+                        const initialTested = {};
+                        data.equipment.forEach(eq => initialTested[eq.id] = false);
+                        setTestedEquipment(initialTested);
+                        setGameState('intro');
+                    })
+                    .catch(err => {
+                        console.error('Error loading config:', err);
+                        alert('Failed to load game configuration. Make sure config.json is in the same folder.');
+                    });
+            }, []);
+
+            if (!config) {
+                return (
+                    <div className="w-full h-screen bg-gray-800 flex items-center justify-center">
+                        <div className="text-white text-2xl">Loading game...</div>
+                    </div>
+                );
+            }
+
+            const handleEquipmentClick = (equipmentId) => {
+                if (!testedEquipment[equipmentId]) {
+                    setSelectedEquipment(equipmentId);
+                }
+            };
+
+            const handleToolClick = (toolId) => {
+                if (selectedEquipment && !testedEquipment[selectedEquipment]) {
+                    if (toolId === 'insulationMeter') {
+                        setShowElectricStrike(true);
+                        setTimeout(() => {
+                            setShowElectricStrike(false);
+                            setFireActive(true);
+                            setTimeout(() => {
+                                setGameState('gameOver');
+                            }, 3000);
+                        }, 800);
+                        return;
+                    }
+
+                    const equip = config.equipment.find(e => e.id === selectedEquipment);
+                    const passed = equip.shouldPass;
+
+                    setTestedEquipment(prev => ({ ...prev, [selectedEquipment]: true }));
+                    setTestResults(prev => ({ ...prev, [selectedEquipment]: passed }));
+
+                    if (passed) {
+                        setScore(prev => prev + 100);
+                    }
+
+                    setSelectedEquipment(null);
+
+                    setTimeout(() => {
+                        const allTested = Object.values({ ...testedEquipment, [selectedEquipment]: true }).every(v => v);
+                        if (allTested) {
+                            setGameState('complete');
+                        }
+                    }, 1500);
+                }
+            };
+
+            const resetGame = () => {
+                setGameState('intro');
+                setSelectedEquipment(null);
+                const initialTested = {};
+                config.equipment.forEach(eq => initialTested[eq.id] = false);
+                setTestedEquipment(initialTested);
+                setTestResults({});
+                setScore(0);
+                setFireActive(false);
+                setShowElectricStrike(false);
+            };
+
+            if (gameState === 'intro') {
+                return (
+                    <div className="w-full h-screen bg-gradient-to-b from-gray-700 to-gray-900 flex items-center justify-center">
+                        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md text-center">
+                            <div className="mb-6">
+                                <img src={config.images.mainCharacter} alt="Electrician" className="w-48 h-48 mx-auto object-contain" />
+                            </div>
+                            <h1 className="text-3xl font-bold text-gray-800 mb-4">Electrical Safety Inspector</h1>
+                            <p className="text-gray-600 mb-6">
+                                Welcome! Your job is to test all electrical equipment in the factory room.
+                                First click on equipment to select it, then click on a tool to test it.
+                            </p>
+                            <button 
+                                onClick={() => setGameState('playing')}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition"
+                            >
+                                Start Inspection
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameState === 'complete') {
+                const passedCount = Object.values(testResults).filter(v => v).length;
+                return (
+                    <div className="w-full h-screen bg-gradient-to-b from-green-700 to-green-900 flex items-center justify-center">
+                        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md text-center">
+                            <h1 className="text-3xl font-bold text-gray-800 mb-4">Inspection Complete!</h1>
+                            <p className="text-xl text-gray-700 mb-4">Score: {score} points</p>
+                            <p className="text-gray-600 mb-6">
+                                Equipment Passed: {passedCount} / {config.equipment.length}
+                            </p>
+                            <div className="space-y-2 mb-6">
+                                {config.equipment.map(equip => (
+                                    <div key={equip.id} className="flex items-center justify-between bg-gray-100 p-3 rounded">
+                                        <span>{equip.name}</span>
+                                        <span className={testResults[equip.id] ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
+                                            {testResults[equip.id] ? '✓ PASS' : '✗ FAIL'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                            <button 
+                                onClick={resetGame}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition"
+                            >
+                                New Inspection
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (gameState === 'gameOver') {
+                return (
+                    <div className="w-full h-screen bg-gradient-to-b from-red-900 to-black flex items-center justify-center">
+                        <div className="bg-gray-900 border-4 border-red-600 rounded-lg shadow-2xl p-8 max-w-md text-center">
+                            <h1 className="text-4xl font-bold text-red-500 mb-4">⚠️ CRITICAL FAILURE ⚠️</h1>
+                            <p className="text-xl text-red-400 mb-4">Electrical Fire!</p>
+                            <p className="text-gray-300 mb-6">
+                                NEVER use an insulation meter on live equipment! 
+                                The incorrect tool caused an electrical short circuit and fire.
+                            </p>
+                            <p className="text-yellow-400 mb-6">
+                                Final Score: {score} points
+                            </p>
+                            <button 
+                                onClick={resetGame}
+                                className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition"
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div 
+                    className="w-full h-screen bg-gray-800 relative overflow-hidden select-none" 
+                    style={{ cursor: `url(${config.images.handCursor}) 12 12, pointer` }}
+                >
+                    {showElectricStrike && (
+                        <div className="absolute inset-0 z-50 pointer-events-none">
+                            <div className="absolute inset-0 bg-white animate-pulse opacity-80"></div>
+                            <svg className="absolute inset-0 w-full h-full">
+                                <path d="M 50% 0 L 45% 30% L 55% 30% L 50% 60% L 40% 60% L 50% 100%" stroke="yellow" strokeWidth="8" fill="none" className="animate-pulse" />
+                                <path d="M 30% 20% L 25% 40% L 35% 40% L 30% 70%" stroke="cyan" strokeWidth="6" fill="none" className="animate-pulse" />
+                                <path d="M 70% 10% L 65% 35% L 75% 35% L 70% 65%" stroke="yellow" strokeWidth="7" fill="none" className="animate-pulse" />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="text-6xl font-bold text-yellow-300 animate-pulse drop-shadow-lg">
+                                    ⚡ ELECTRICAL SHORT! ⚡
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {fireActive && (
+                        <div className="absolute inset-0 z-40 pointer-events-none">
+                            <div className="absolute inset-0 bg-gradient-to-t from-orange-600 via-red-500 to-yellow-400 opacity-70 animate-pulse"></div>
+                            <div className="absolute bottom-0 left-0 right-0 h-full">
+                                {[...Array(20)].map((_, i) => (
+                                    <div
+                                        key={i}
+                                        className="absolute bottom-0 w-16 h-32 bg-gradient-to-t from-orange-500 via-red-500 to-transparent rounded-full animate-bounce"
+                                        style={{
+                                            left: `${i * 5}%`,
+                                            animationDelay: `${i * 0.1}s`,
+                                            animationDuration: `${0.8 + Math.random() * 0.4}s`
+                                        }}
+                                    ></div>
+                                ))}
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="text-6xl font-bold text-red-600 animate-pulse drop-shadow-lg">
+                                    🔥 FIRE! 🔥
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="absolute top-4 left-4 bg-gray-900 bg-opacity-90 p-4 rounded-lg z-20">
+                        <div className="text-white">
+                            <h2 className="text-xl font-bold">Safety Inspection</h2>
+                            <p className="text-sm">Score: {score}</p>
+                            <p className="text-sm">Tested: {Object.values(testedEquipment).filter(v => v).length} / {config.equipment.length}</p>
+                            {selectedEquipment && (
+                                <p className="text-yellow-400 text-sm mt-2">
+                                    Selected: {config.equipment.find(e => e.id === selectedEquipment)?.name}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        {config.images.factoryRoom ? (
+                            <img src={config.images.factoryRoom} alt="Factory Room" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-blue-100 to-blue-200 relative">
+                                <div className="absolute top-1/4 left-1/4 w-64 h-48 bg-white border-4 border-gray-800 rounded-lg shadow-lg">
+                                    <div className="absolute inset-2 bg-gradient-to-b from-blue-200 to-blue-300"></div>
+                                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-yellow-300 rounded-full"></div>
+                                </div>
+                                <div className="absolute bottom-1/4 left-1/4 w-96 h-16 bg-amber-700 rounded shadow-lg"></div>
+                                <div className="absolute top-1/3 right-1/4 w-64 h-96 bg-gray-300 border-4 border-gray-700 rounded-lg shadow-xl">
+                                    <div className="absolute inset-4 grid grid-cols-3 gap-2">
+                                        {[...Array(9)].map((_, i) => (
+                                            <div key={i} className="bg-white border-2 border-gray-600 rounded flex flex-col items-center justify-center p-1">
+                                                <div className="w-8 h-8 bg-gray-700 rounded-sm mb-1"></div>
+                                                <div className="w-full h-4 bg-green-500 rounded-sm"></div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="absolute z-5 pointer-events-none" style={{ 
+                        left: `${config.gameObjects.charger.x}%`, 
+                        top: `${config.gameObjects.charger.y}%`, 
+                        width: `${config.gameObjects.charger.width}px`, 
+                        height: `${config.gameObjects.charger.height}px` 
+                    }}>
+                        <img src={config.images.charger} alt="Charger" className="w-full h-full object-contain drop-shadow-lg" />
+                    </div>
+
+                    <div className="absolute z-5 pointer-events-none" style={{ 
+                        left: `${config.gameObjects.mainCharacter.x}%`, 
+                        top: `${config.gameObjects.mainCharacter.y}%`, 
+                        width: `${config.gameObjects.mainCharacter.width}px`, 
+                        height: `${config.gameObjects.mainCharacter.height}px` 
+                    }}>
+                        <img src={config.images.mainCharacter} alt="Electrician" className="w-full h-full object-contain drop-shadow-lg" />
+                    </div>
+
+                    {config.tools.map(tool => (
+                        <div
+                            key={tool.id}
+                            onClick={() => handleToolClick(tool.id)}
+                            className={`absolute cursor-pointer transition-all hover:scale-110 z-10 ${
+                                selectedEquipment ? 'ring-4 ring-green-400 hover:ring-green-600' : 'opacity-50'
+                            }`}
+                            style={{
+                                left: `${tool.x}%`,
+                                top: `${tool.y}%`,
+                                width: `${tool.size}px`,
+                                height: `${tool.size}px`,
+                                pointerEvents: selectedEquipment ? 'auto' : 'none'
+                            }}
+                            title={tool.name}
+                        >
+                            <img 
+                                src={config.images[tool.id]} 
+                                alt={tool.name} 
+                                className="w-full h-full object-contain drop-shadow-lg"
+                            />
+                        </div>
+                    ))}
+
+                    {config.equipment.map(equip => (
+                        <div
+                            key={equip.id}
+                            onClick={() => handleEquipmentClick(equip.id)}
+                            className={`absolute cursor-pointer transition-all ${
+                                !testedEquipment[equip.id] && selectedEquipment !== equip.id
+                                    ? 'hover:bg-blue-400 hover:bg-opacity-30 border-2 border-blue-400 border-dashed'
+                                    : ''
+                            } ${
+                                selectedEquipment === equip.id
+                                    ? 'bg-yellow-400 bg-opacity-40 border-4 border-yellow-400 border-dashed animate-pulse'
+                                    : ''
+                            } ${testedEquipment[equip.id] ? 'pointer-events-none' : ''}`}
+                            style={{
+                                left: `${equip.x}%`,
+                                top: `${equip.y}%`,
+                                width: `${equip.width}%`,
+                                height: `${equip.height}%`
+                            }}
+                            title={equip.name}
+                        >
+                        </div>
+                    ))}
+
+                    {Object.keys(testResults).length > 0 && (
+                        <div className="absolute z-30" style={{ 
+                            left: `${config.testResultDisplay.x}%`, 
+                            top: `${config.testResultDisplay.y}%`, 
+                            width: `${config.testResultDisplay.width}px`, 
+                            height: `${config.testResultDisplay.height}px` 
+                        }}>
+                            {Object.entries(testResults).map(([equipId, passed]) => {
+                                if (!testedEquipment[equipId]) return null;
+                                
+                                return (
+                                    <div key={equipId} className="absolute inset-0 flex items-center justify-center">
+                                        {passed ? (
+                                            <img src={config.images.testPass} alt="Test Successful" className="w-full h-full object-contain animate-pulse" />
+                                        ) : (
+                                            <img src={config.images.testFails} alt="Test Failed" className="w-full h-full object-contain animate-pulse" />
+                                        )}
+                                    </div>
+                                );
+                            }).filter(Boolean).slice(-1)}
+                        </div>
+                    )}
+
+                    {selectedEquipment ? (
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-green-400 text-black px-6 py-3 rounded-lg font-semibold z-20">
+                            Now click on a tool to test {config.equipment.find(e => e.id === selectedEquipment)?.name}
+                        </div>
+                    ) : (
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-400 text-black px-6 py-3 rounded-lg font-semibold z-20">
+                            Click on equipment to select it for testing
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<ElectricalPuzzleGame />, document.getElementById('root'));
+    </script>
+</body>
+</html>
