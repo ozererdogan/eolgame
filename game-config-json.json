@@ -1,0 +1,103 @@
+{
+  "images": {
+    "mainCharacter": "assets/electrician.png",
+    "handCursor": "assets/hand-cursor.png",
+    "voltageMeter": "assets/voltage-meter.png",
+    "cables": "assets/cables.png",
+    "insulationMeter": "assets/insulation-meter.png",
+    "testPass": "assets/test-pass.png",
+    "testFails": "assets/test-fail.png",
+    "charger": "assets/charger.png",
+    "factoryRoom": "assets/factory-room.png"
+  },
+  "gameObjects": {
+    "mainCharacter": {
+      "x": 45,
+      "y": 55,
+      "width": 720,
+      "height": 720
+    },
+    "charger": {
+      "x": 5,
+      "y": 48,
+      "width": 360,
+      "height": 360
+    }
+  },
+  "equipment": [
+    {
+      "id": "cabinet1",
+      "name": "Cabinet Row 1",
+      "x": 70,
+      "y": 28,
+      "width": 15,
+      "height": 8,
+      "shouldPass": true
+    },
+    {
+      "id": "cabinet2",
+      "name": "Cabinet Row 2",
+      "x": 70,
+      "y": 38,
+      "width": 15,
+      "height": 8,
+      "shouldPass": false
+    },
+    {
+      "id": "cabinet3",
+      "name": "Cabinet Row 3",
+      "x": 70,
+      "y": 48,
+      "width": 15,
+      "height": 8,
+      "shouldPass": true
+    },
+    {
+      "id": "charger",
+      "name": "Charging Station",
+      "x": 5,
+      "y": 48,
+      "width": 15,
+      "height": 18,
+      "shouldPass": true
+    },
+    {
+      "id": "testDevice",
+      "name": "Test Equipment",
+      "x": 20,
+      "y": 55,
+      "width": 12,
+      "height": 10,
+      "shouldPass": false
+    }
+  ],
+  "tools": [
+    {
+      "id": "voltageMeter",
+      "name": "Voltage Meter",
+      "x": 15,
+      "y": 45,
+      "size": 80
+    },
+    {
+      "id": "cables",
+      "name": "Cables",
+      "x": 35,
+      "y": 50,
+      "size": 210
+    },
+    {
+      "id": "insulationMeter",
+      "name": "Insulation Meter",
+      "x": 25,
+      "y": 20,
+      "size": 90
+    }
+  ],
+  "testResultDisplay": {
+    "x": 35,
+    "y": 35,
+    "width": 264,
+    "height": 264
+  }
+}
